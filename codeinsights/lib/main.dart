@@ -1,125 +1,469 @@
+// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables, avoid_print
+
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  const MyApp({Key? key}) : super(key: key);
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
+    return ChangeNotifierProvider(
+      create: (context) => MyAppState(),
+      child: MaterialApp(
+        title: 'Namer App',
+        darkTheme: ThemeData(
+          brightness: Brightness.dark,
+        ),
+        home: MyHomePage(),
+        debugShowCheckedModeBanner: false, // Remove the debug banner
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
     );
   }
 }
 
+class MyAppState extends ChangeNotifier {
+  var current = Post.random();
+  var history = <Post>[];
+
+  GlobalKey? historyListKey;
+
+  void getNext() {
+    history.insert(0, current);
+    var animatedList = historyListKey?.currentState as AnimatedListState?;
+    animatedList?.insertItem(0);
+    current = Post.random();
+    notifyListeners();
+  }
+
+  var favorites = <Post>[];
+
+  void toggleFavorite([Post? post]) {
+    post = post ?? current;
+    if (favorites.contains(post)) {
+      favorites.remove(post);
+    } else {
+      favorites.add(post);
+    }
+    notifyListeners();
+  }
+
+  void removeFavorite(Post post) {
+    favorites.remove(post);
+    notifyListeners();
+  }
+
+  void addPost(String title, String content) {
+    history.insert(0, Post(title, content));
+    var animatedList = historyListKey?.currentState as AnimatedListState?;
+    animatedList?.insertItem(0);
+    notifyListeners();
+  }
+}
+
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
-
   @override
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+  var selectedIndex = 0;
+  final picker = ImagePicker();
+  List<File> _images = [];
+  TextEditingController titleController = TextEditingController();
+  TextEditingController contentController = TextEditingController();
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
+@override
+  Widget build(BuildContext context) {
+    var colorScheme = Theme.of(context).colorScheme;
+    var theme = Theme.of(context);
+    var appState = context.watch<MyAppState>();
+
+    Widget page;
+    switch (selectedIndex) {
+      case 0:
+        page = PostHistoryPage();
+        break;
+      case 1:
+        page = FavoritesPage();
+        break;
+      default:
+        throw UnimplementedError('no widget for $selectedIndex');
+    }
+
+    var mainArea = Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Container(
+          margin: EdgeInsets.only(top: 5, bottom: 5, right: 10), // Adjusted top margin
+          child: ElevatedButton(
+            onPressed: () {
+              _showPostDialog(context, appState);
+            },
+            style: ElevatedButton.styleFrom(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8.0),
+              ),
+            ),
+            child: Text('Start Discussion'),
+          ),
+        ),
+        Expanded(
+          child: ColoredBox(
+            color: colorScheme.surfaceVariant,
+            child: AnimatedSwitcher(
+              duration: Duration(milliseconds: 200),
+              child: page,
+            ),
+          ),
+        ),
+      ],
+    );
+
+    return Scaffold(
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth < 450) {
+            return Column(
+              children: [
+                Expanded(child: mainArea),
+                SafeArea(
+                  child: BottomNavigationBar(
+                    items: [
+                      BottomNavigationBarItem(
+                        icon: Icon(Icons.home),
+                        label: 'Home',
+                      ),
+                      BottomNavigationBarItem(
+                        icon: Icon(Icons.favorite),
+                        label: 'Favorites',
+                      ),
+                    ],
+                    currentIndex: selectedIndex,
+                    onTap: (value) {
+                      setState(() {
+                        selectedIndex = value;
+                      });
+                    },
+                  ),
+                )
+              ],
+            );
+          } else {
+            return Row(
+              children: [
+                SafeArea(
+                  child: NavigationRail(
+                    extended: constraints.maxWidth >= 600,
+                    destinations: [
+                      NavigationRailDestination(
+                        icon: Icon(Icons.home),
+                        label: Text('Home'),
+                      ),
+                      NavigationRailDestination(
+                        icon: Icon(Icons.book),
+                        label: Text('Education'),
+                        
+                      ),
+                    ],
+                    selectedIndex: selectedIndex,
+                    onDestinationSelected: (value) {
+                      setState(() {
+                        selectedIndex = value;
+                      });
+                    },
+                  ),
+                ),
+                Expanded(child: mainArea),
+              ],
+            );
+          }
+        },
+      ),
+    );
   }
+  void _showPostDialog(BuildContext context, MyAppState appState) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setState) {
+            String title = '';
+            String content = '';
+            bool showWarning = false;
 
+            return AlertDialog(
+              title: Text('Write a Post'),
+              content: Container(
+                width: 600,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Text(
+                        'Title',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    TextField(
+                      controller: titleController,
+                      onChanged: (value) {
+                        title = value;
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'Write your title',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    if (showWarning && title.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 5),
+                        child: Text(
+                          'Required field',
+                          style: TextStyle(color: Colors.red),
+                        ),
+                      ),
+                    SizedBox(height: 10),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Text(
+                        'Content',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    TextField(
+                      controller: contentController,
+                      onChanged: (value) {
+                        content = value;
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'Write your content',
+                        border: OutlineInputBorder(),
+                      ),
+                      maxLines: 5,
+                      textAlignVertical: TextAlignVertical.top,
+                    ),
+                    if (showWarning && content.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 5),
+                        child: Text(
+                          'Required field',
+                          style: TextStyle(color: Colors.red),
+                        ),
+                      ),
+                    SizedBox(height: 10),
+                    if (_images.isNotEmpty)
+                      Container(
+                        height: 100,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _images.length,
+                          itemBuilder: (context, index) {
+                            return Stack(
+                              children: [
+                                Container(
+                                  height: 80,
+                                  width: 80,
+                                  margin: EdgeInsets.only(right: 8),
+                                  child: Stack(
+                                    children: [
+                                      Image.file(
+                                        _images[index],
+                                        fit: BoxFit.cover,
+                                      ),
+                                      Positioned(
+                                        top: 0,
+                                        right: 0,
+                                        child: GestureDetector(
+                                          onTap: () {
+                                            setState(() {
+                                              _images.removeAt(index);
+                                            });
+                                          },
+                                          child: Container(
+                                            padding: EdgeInsets.all(4),
+                                            color: Colors.red,
+                                            child: Icon(
+                                              Icons.close,
+                                              color: Colors.white,
+                                              size: 16,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                    Row(
+                      children: [
+                        ElevatedButton(
+                          onPressed: () async {
+                            final result = await FilePicker.platform.pickFiles(
+                              type: FileType.custom,
+                              allowedExtensions: ['jpg', 'jpeg', 'png'],
+                            );
+                            if (result != null && result.files.isNotEmpty) {
+                              setState(() {
+                                _images.add(File(result.files.single.path!));
+                              });
+                              print('Image picked: ${result.files.single.path}');
+                            }
+                          },
+                          child: Text('Add Image'),
+                        ),
+                        SizedBox(width: 10),
+                        ElevatedButton(
+                          onPressed: () {
+                            // Handle inline code feature
+                            print('Inline Code added');
+                          },
+                          child: Text('Inline Code'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    if (title.isEmpty || content.isEmpty) {
+                      setState(() {
+                        showWarning = true;
+                      });
+                    } else {
+                      appState.addPost(title, content);
+                      titleController.clear();
+                      contentController.clear();
+                      _images.clear();
+
+                      print('Post Submitted');
+                      Navigator.of(context).pop();
+                    }
+                  },
+                  child: Text('Submit'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class PostHistoryPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+    var theme = Theme.of(context);
+    var appState = context.watch<MyAppState>();
+
+    return ListView.builder(
+      itemCount: appState.history.length,
+      itemBuilder: (context, index) {
+        var post = appState.history[index];
+        return Card(
+          margin: EdgeInsets.all(8),
+          child: ListTile(
+            title: Text(post.title),
+            subtitle: Text(post.content),
+          ),
+        );
+      },
     );
+  }
+}
+
+class FavoritesPage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    var theme = Theme.of(context);
+    var appState = context.watch<MyAppState>();
+
+    if (appState.favorites.isEmpty) {
+      return Center(
+        child: Text('No favorites yet.'),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(30),
+          child: Text('You have '
+              '${appState.favorites.length} favorites:'),
+        ),
+        Expanded(
+          child: GridView(
+            gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+              maxCrossAxisExtent: 400,
+              childAspectRatio: 400 / 80,
+            ),
+            children: [
+              for (var post in appState.favorites)
+                ListTile(
+                  leading: IconButton(
+                    icon: Icon(Icons.delete_outline, semanticLabel: 'Delete'),
+                    color: theme.colorScheme.primary,
+                    onPressed: () {
+                      appState.removeFavorite(post);
+                    },
+                  ),
+                  title: Text(
+                    post.asLowerCase,
+                    semanticsLabel: post.asPascalCase,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class Post {
+  final String title;
+  final String content;
+
+  Post(this.title, this.content);
+
+  factory Post.random() {
+    return Post(
+      'Title ${DateTime.now().millisecondsSinceEpoch}',
+      'Content ${DateTime.now().millisecondsSinceEpoch}',
+    );
+  }
+
+  String get asLowerCase => '$title $content'.toLowerCase();
+
+  String get asPascalCase => '${title.capitalize()} ${content.capitalize()}';
+}
+
+extension StringExtension on String {
+  String capitalize() {
+    return '${this[0].toUpperCase()}${this.substring(1)}';
   }
 }
