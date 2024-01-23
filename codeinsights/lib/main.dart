@@ -162,7 +162,7 @@ class _MyHomePageState extends State<MyHomePage> {
               children: [
                 SafeArea(
                   child: NavigationRail(
-                    extended: constraints.maxWidth >= 600,
+                    extended: constraints.maxWidth >= 900,
                     destinations: [
                       NavigationRailDestination(
                         icon: Icon(Icons.home),
@@ -171,7 +171,10 @@ class _MyHomePageState extends State<MyHomePage> {
                       NavigationRailDestination(
                         icon: Icon(Icons.book),
                         label: Text('Education'),
-                        
+                      ),
+                      NavigationRailDestination(
+                        icon: Icon(Icons.fitness_center),
+                        label: Text('Exercise'),                       
                       ),
                     ],
                     selectedIndex: selectedIndex,
