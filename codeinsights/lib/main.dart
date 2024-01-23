@@ -19,7 +19,7 @@ class MyApp extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (context) => MyAppState(),
       child: MaterialApp(
-        title: 'Namer App',
+        title: 'Codesights',
         darkTheme: ThemeData(
           brightness: Brightness.dark,
         ),
@@ -103,7 +103,7 @@ class _MyHomePageState extends State<MyHomePage> {
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         Container(
-          margin: EdgeInsets.only(top: 5, bottom: 5, right: 10), // Adjusted top margin
+          margin: EdgeInsets.only(top: 5, bottom: 5, right: 5), // Adjusted top margin
           child: ElevatedButton(
             onPressed: () {
               _showPostDialog(context, appState);
@@ -143,8 +143,12 @@ class _MyHomePageState extends State<MyHomePage> {
                         label: 'Home',
                       ),
                       BottomNavigationBarItem(
-                        icon: Icon(Icons.favorite),
-                        label: 'Favorites',
+                        icon: Icon(Icons.book),
+                        label: 'Education',
+                      ),
+                      BottomNavigationBarItem(
+                        icon: Icon(Icons.fitness_center),
+                        label: 'Exercise',
                       ),
                     ],
                     currentIndex: selectedIndex,
