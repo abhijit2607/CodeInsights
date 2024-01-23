@@ -173,6 +173,32 @@ class _MyHomePageState extends State<MyHomePage> {
                         label: Text('Home'),
                       ),
                       NavigationRailDestination(
+                        icon: Icon(Icons.doo<!DOCTYPE html>
+<html>
+<head>
+<title>Page Title</title>
+</head>
+<body>
+
+<h1>This is a Heading</h1>
+<p>This is a paragraph.</p>
+
+</body>
+</html><!DOCTYPE html>
+<html>
+<head>
+<title>Page Title</title>
+</head>
+<body>
+
+<h1>This is a Heading</h1>
+<p>This is a paragraph.</p>
+
+</body>
+</html>rbell),
+                        label: Text('Notifications'),
+                      ),
+                      NavigationRailDestination(
                         icon: Icon(Icons.book),
                         label: Text('Education'),
                       ),
@@ -402,6 +428,8 @@ class PostHistoryPage extends StatelessWidget {
   }
 }
 
+
+//Education page to be updated
 class FavoritesPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
