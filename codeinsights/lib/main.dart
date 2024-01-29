@@ -1,13 +1,29 @@
-// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables, avoid_print
-
 import 'dart:io';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
-void main() {
+import 'sign_in_screen.dart';
+import 'sign_up_screen.dart';
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: FirebaseOptions(
+      apiKey: "AIzaSyBNNhBzISxqg452EzXHAejKNhZGTKr4wC8",
+      authDomain: "codeinsights-792b1.firebaseapp.com",
+      databaseURL: "https://codeinsights-792b1-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "codeinsights-792b1",
+      storageBucket: "codeinsights-792b1.appspot.com",
+      messagingSenderId: "358578040162",
+      appId: "1:358578040162:web:86afd7f66fb5a71e36903b",
+    ),
+  );
+  FirebaseFirestore firestore = FirebaseFirestore.instance;
   runApp(MyApp());
 }
 
@@ -19,31 +35,30 @@ class MyApp extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (context) => MyAppState(),
       child: MaterialApp(
-        title: 'Codesights',
+        title: 'Codewire',
         darkTheme: ThemeData(
           brightness: Brightness.dark,
         ),
         home: MyHomePage(),
-        debugShowCheckedModeBanner: false, // Remove the debug banner
+        debugShowCheckedModeBanner: false,
       ),
     );
   }
 }
 
 class MyAppState extends ChangeNotifier {
-  var current = Post.random();
+  var current = Post.random("default_username"); // Set a default username
   var history = <Post>[];
 
-  GlobalKey? historyListKey;
+  GlobalKey<AnimatedListState>? historyListKey;
 
-  void getNext() {
+  void getNext(String username) {
     history.insert(0, current);
-    var animatedList = historyListKey?.currentState as AnimatedListState?;
+    var animatedList = historyListKey?.currentState;
     animatedList?.insertItem(0);
-    current = Post.random();
+    current = Post.random(username);
     notifyListeners();
   }
-
   var favorites = <Post>[];
 
   void toggleFavorite([Post? post]) {
@@ -63,9 +78,46 @@ class MyAppState extends ChangeNotifier {
 
   void addPost(String title, String content) {
     history.insert(0, Post(title, content));
-    var animatedList = historyListKey?.currentState as AnimatedListState?;
+    var animatedList = historyListKey?.currentState;
     animatedList?.insertItem(0);
     notifyListeners();
+  }
+}
+
+class FirestoreService {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  Future<void> addPost(String title, String content, String username) async {
+    try {
+      await _firestore.collection('posts').add({
+        'title': title,
+        'content': content,
+        'username': username,
+      });
+    } catch (e) {
+      print('Error adding post: $e');
+    }
+  }
+
+  Stream<List<Post>> getPosts() {
+    try {
+      return _firestore.collection('posts').snapshots().map(
+        (snapshot) {
+          return snapshot.docs.map((doc) {
+            Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+            return Post(
+              data['title'],
+              data['content'],
+              userId: doc.id,
+              username: data['username'],
+            );
+          }).toList();
+        },
+      );
+    } catch (e) {
+      print('Error getting posts: $e');
+      return Stream.value([]);
+    }
   }
 }
 
@@ -81,10 +133,9 @@ class _MyHomePageState extends State<MyHomePage> {
   TextEditingController titleController = TextEditingController();
   TextEditingController contentController = TextEditingController();
 
-@override
+  @override
   Widget build(BuildContext context) {
     var colorScheme = Theme.of(context).colorScheme;
-    var theme = Theme.of(context);
     var appState = context.watch<MyAppState>();
 
     Widget page;
@@ -99,23 +150,45 @@ class _MyHomePageState extends State<MyHomePage> {
         throw UnimplementedError('no widget for $selectedIndex');
     }
 
-    var mainArea = Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Container(
-          margin: EdgeInsets.only(top: 5, bottom: 5, right: 5), // Adjusted top margin
-          child: ElevatedButton(
-            onPressed: () {
-              _showPostDialog(context, appState);
-            },
-            style: ElevatedButton.styleFrom(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8.0),
+    Widget _buildLeadingWidget() {
+  final screenWidth = MediaQuery.of(context).size.width;
+
+  if (screenWidth < 450) {
+    return Container(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly, // Align children to the start (left)
+        children: [
+          Padding(
+            padding: EdgeInsets.only(left: 105.0, right: 100.0), // Adjust the left padding as needed
+            child: Text(
+              'CW',
+              style: TextStyle(
+                fontFamily: 'TeXGyreBonum',
+                fontWeight: FontWeight.bold,
+                fontSize: 22,
               ),
             ),
-            child: Text('Start Discussion'),
           ),
-        ),
+          IconButton(
+            icon: Icon(Icons.search),
+            padding: EdgeInsets.only(left: 20, right: 0),
+            onPressed: () {
+              // Add your search icon action here
+            },
+          ),
+        ],
+      ),
+    );
+  } else {
+    return _buildLogoImage();
+  }
+}
+
+    var leadingWidget = _buildLeadingWidget();
+
+    var mainArea = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
         Expanded(
           child: ColoredBox(
             color: colorScheme.surfaceVariant,
@@ -129,41 +202,95 @@ class _MyHomePageState extends State<MyHomePage> {
     );
 
     return Scaffold(
+      appBar: AppBar(
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            leadingWidget,
+            if (MediaQuery.of(context).size.width >= 450)
+              ElevatedButton(
+                onPressed: () {
+                  _showPostDialog(context, appState);
+                },
+                child: Text('Start Discussion', style: TextStyle(color: Colors.white)),
+                style: ButtonStyle(
+                  backgroundColor: MaterialStateProperty.all<Color>(Colors.blue),
+                  shape: MaterialStateProperty.all<RoundedRectangleBorder>(
+                    RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
       body: LayoutBuilder(
         builder: (context, constraints) {
           if (constraints.maxWidth < 450) {
-            return Column(
+            return Stack(
               children: [
-                Expanded(child: mainArea),
-                SafeArea(
-                  child: BottomNavigationBar(
-                    items: [
-                      BottomNavigationBarItem(
-                        icon: Icon(Icons.home),
-                        label: 'Home',
-                      ),
-                      BottomNavigationBarItem(
-                        icon: Icon(Icons.book),
-                        label: 'Education',
-                      ),
-                      BottomNavigationBarItem(
-                        icon: Icon(Icons.fitness_center),
-                        label: 'Exercise',
-                      ),
-                    ],
-                    currentIndex: selectedIndex,
-                    onTap: (value) {
-                      setState(() {
-                        selectedIndex = value;
-                      });
-                    },
-                  ),
-                )
+                Column(
+                  children: [
+                    Expanded(child: mainArea),
+                  ],
+                ),
+                Positioned(
+  bottom: 8,
+  left: 305,
+  right: 0,
+  child: Row(
+    mainAxisAlignment: MainAxisAlignment.spaceAround,
+    children: [
+      FloatingActionButton(
+        onPressed: () {
+          _showPostDialog(context, appState);
+        },
+        tooltip: 'Start Discussion',
+        child: Icon(Icons.post_add),
+        backgroundColor: Colors.blue,
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(45),
+        ),
+      ),
+      if (MediaQuery.of(context).size.width >= 1024) // Only show the search box for desktop view
+  Container(
+    width: 200, // Adjust the width as needed
+    padding: EdgeInsets.only(left: 8),
+    child: TextField(
+      // Add your search text field properties here
+      decoration: InputDecoration(
+        hintText: 'Search',
+        // ... other properties
+      ),
+    ),
+  ),
+    ],
+  ),
+),
               ],
             );
           } else {
             return Row(
               children: [
+                if (MediaQuery.of(context).size.width >= 450 &&
+                    MediaQuery.of(context).size.width < 900)
+                  Align(
+                    alignment: Alignment.bottomRight,
+                    child: Padding(
+                      padding: const EdgeInsets.all(6.0),
+                      child: FloatingActionButton(
+                        onPressed: () {
+                          _showPostDialog(context, appState);
+                        },
+                        tooltip: 'Start Discussion',
+                        child: Icon(Icons.post_add),
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ),
                 SafeArea(
                   child: NavigationRail(
                     extended: constraints.maxWidth >= 900,
@@ -171,40 +298,22 @@ class _MyHomePageState extends State<MyHomePage> {
                       NavigationRailDestination(
                         icon: Icon(Icons.home),
                         label: Text('Home'),
+                        padding: EdgeInsets.only(top: 10, bottom: 0),
                       ),
                       NavigationRailDestination(
-                        icon: Icon(Icons.doo<!DOCTYPE html>
-<html>
-<head>
-<title>Page Title</title>
-</head>
-<body>
-
-<h1>This is a Heading</h1>
-<p>This is a paragraph.</p>
-
-</body>
-</html><!DOCTYPE html>
-<html>
-<head>
-<title>Page Title</title>
-</head>
-<body>
-
-<h1>This is a Heading</h1>
-<p>This is a paragraph.</p>
-
-</body>
-</html>rbell),
+                        icon: Icon(Icons.notifications),
                         label: Text('Notifications'),
+                        padding: EdgeInsets.only(top: 0, bottom: 0),
                       ),
                       NavigationRailDestination(
                         icon: Icon(Icons.book),
                         label: Text('Education'),
+                        padding: EdgeInsets.only(top: 0, bottom: 0),
                       ),
                       NavigationRailDestination(
                         icon: Icon(Icons.fitness_center),
-                        label: Text('Exercise'),                       
+                        label: Text('Exercise'),
+                        padding: EdgeInsets.only(top: 0, bottom: 0),
                       ),
                     ],
                     selectedIndex: selectedIndex,
@@ -221,8 +330,101 @@ class _MyHomePageState extends State<MyHomePage> {
           }
         },
       ),
+
+drawer: MediaQuery.of(context).size.width < 450 ? _buildDrawer(context) : null,
+
+      bottomNavigationBar: MediaQuery.of(context).size.width < 1024
+          ? BottomNavigationBar(
+              items: const <BottomNavigationBarItem>[
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.home),
+                  label: 'Home',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.notifications),
+                  label: 'Notifications',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.book),
+                  label: 'Education',
+                ),
+              ],
+              currentIndex: selectedIndex,
+              onTap: (index) {
+                setState(() {
+                  selectedIndex = index;
+                });
+              },
+            )
+          : null, // Hide bottom navigation bar on desktop
     );
   }
+
+  Widget _buildLogoImage() {
+    return Image.asset('assets/logo.png', width: 180, height: 180);
+  }
+
+  Widget _buildDrawer(BuildContext context) {
+  return Drawer(
+    child: ListView(
+      padding: EdgeInsets.zero,
+      children: [
+        DrawerHeader(
+          decoration: BoxDecoration(
+            color: Colors.blue,
+          ),
+          child: Text(
+            'Drawer Header',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+            ),
+          ),
+        ),
+        ListTile(
+          title: Text('Profile'),
+          onTap: () {
+            // Handle item 1 tap
+          },
+        ),
+        ListTile(
+          title: Text('Settings'),
+          onTap: () {
+            // Handle item 2 tap
+          },
+        ),
+        ListTile(
+          title: Text('Login'),
+          onTap: () {
+            _showLoginDialog(context);
+          },
+        ),
+        ListTile(
+          title: Text('Sign Up'),
+          onTap: () {
+            _showSignUpDialog(context);
+          },
+        ),
+      ],
+    ),
+  );
+}
+
+void _showLoginDialog(BuildContext context) {
+  
+  // Implement the login dialog here
+  // You can use the same StatefulBuilder pattern as in the _showPostDialog method
+   Navigator.pop(context); // Close the drawer
+  Navigator.push(context, MaterialPageRoute(builder: (context) => SignInScreen()));
+}
+
+void _showSignUpDialog(BuildContext context) {
+  // Implement the sign-up dialog here
+  // You can use the same StatefulBuilder pattern as in the _showPostDialog method
+    Navigator.pop(context); // Close the drawer
+  Navigator.push(context, MaterialPageRoute(builder: (context) => SignUpScreen()));
+}
+
   void _showPostDialog(BuildContext context, MyAppState appState) {
     showDialog(
       context: context,
@@ -231,12 +433,12 @@ class _MyHomePageState extends State<MyHomePage> {
           builder: (BuildContext context, StateSetter setState) {
             String title = '';
             String content = '';
-            bool showWarning = false;
+            bool showWarning = true;
 
             return AlertDialog(
               title: Text('Write a Post'),
               content: Container(
-                width: 600,
+                width: 900,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -359,14 +561,6 @@ class _MyHomePageState extends State<MyHomePage> {
                           },
                           child: Text('Add Image'),
                         ),
-                        SizedBox(width: 10),
-                        ElevatedButton(
-                          onPressed: () {
-                            // Handle inline code feature
-                            print('Inline Code added');
-                          },
-                          child: Text('Inline Code'),
-                        ),
                       ],
                     ),
                   ],
@@ -405,100 +599,151 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 }
-
-class PostHistoryPage extends StatelessWidget {
+  class PostHistoryPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
     var appState = context.watch<MyAppState>();
 
-    return ListView.builder(
-      itemCount: appState.history.length,
-      itemBuilder: (context, index) {
-        var post = appState.history[index];
-        return Card(
-          margin: EdgeInsets.all(8),
-          child: ListTile(
-            title: Text(post.title),
-            subtitle: Text(post.content),
-          ),
-        );
+    return StreamBuilder<List<Post>>(
+      stream: appState.getPosts(), // Use the getPosts method from appState
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return CircularProgressIndicator();
+        } else if (snapshot.hasError) {
+          return Text('Error: ${snapshot.error}');
+        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return Center(child: Text('No posts yet.'));
+        } else {
+          var posts = snapshot.data!;
+          return ListView.builder(
+            shrinkWrap: true,
+            physics: NeverScrollableScrollPhysics(),
+            itemCount: posts.length,
+            itemBuilder: (context, index) {
+              var post = posts[index];
+              return Card(
+                margin: EdgeInsets.all(8),
+                child: ListTile(
+                  title: Text(post.title),
+                  subtitle: Text(post.content),
+                ),
+              );
+            },
+          );
+        }
       },
     );
   }
 }
 
 
-//Education page to be updated
-class FavoritesPage extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var appState = context.watch<MyAppState>();
+    class FavoritesPage extends StatelessWidget {
+      @override
+      Widget build(BuildContext context) {
+        var theme = Theme.of(context);
+        var appState = context.watch<MyAppState>();
 
-    if (appState.favorites.isEmpty) {
-      return Center(
-        child: Text('No favorites yet.'),
-      );
-    }
+        if (appState.favorites.isEmpty) {
+          return Center(
+            child: Text('No favorites yet.'),
+          );
+        }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(30),
-          child: Text('You have '
-              '${appState.favorites.length} favorites:'),
-        ),
-        Expanded(
-          child: GridView(
-            gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-              maxCrossAxisExtent: 400,
-              childAspectRatio: 400 / 80,
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(30),
+              child: Text('You have '
+                  '${appState.favorites.length} favorites:'),
             ),
-            children: [
-              for (var post in appState.favorites)
-                ListTile(
-                  leading: IconButton(
-                    icon: Icon(Icons.delete_outline, semanticLabel: 'Delete'),
-                    color: theme.colorScheme.primary,
-                    onPressed: () {
-                      appState.removeFavorite(post);
-                    },
-                  ),
-                  title: Text(
-                    post.asLowerCase,
-                    semanticsLabel: post.asPascalCase,
-                  ),
+            Expanded(
+              child: GridView(
+                gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 400,
+                  childAspectRatio: 400 / 80,
                 ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class Post {
+                children: [
+                  for (var post in appState.favorites)
+                    ListTile(
+                      leading: IconButton(
+                        icon: Icon(Icons.delete_outline, semanticLabel: 'Delete'),
+                        color: theme.colorScheme.primary,
+                        onPressed: () {
+                          appState.removeFavorite(post);
+                        },
+                      ),
+                      title: Text(
+                        post.asLowerCase,
+                        semanticsLabel: post.asPascalCase,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        );
+      }
+    }
+    class Post {
   final String title;
   final String content;
+  final String userId;
+  final String username; // Add this property
 
-  Post(this.title, this.content);
+  Post(this.title, this.content, {this.userId = '', this.username = ''});
 
-  factory Post.random() {
+  factory Post.random(String username) {
     return Post(
       'Title ${DateTime.now().millisecondsSinceEpoch}',
       'Content ${DateTime.now().millisecondsSinceEpoch}',
+      username: username,
     );
   }
 
-  String get asLowerCase => '$title $content'.toLowerCase();
+      String get asLowerCase => '$title $content'.toLowerCase();
 
-  String get asPascalCase => '${title.capitalize()} ${content.capitalize()}';
-}
+      String get asPascalCase => '${title.capitalize()} ${content.capitalize()}';
+    }
 
-extension StringExtension on String {
-  String capitalize() {
-    return '${this[0].toUpperCase()}${this.substring(1)}';
-  }
-}
+    extension StringExtension on String {
+      String capitalize() {
+        return '${this[0].toUpperCase()}${this.substring(1)}';
+      }
+    }
+
+    class BottomIconButton extends StatelessWidget {
+      final IconData icon;
+      final String label;
+      final VoidCallback onPressed;
+
+      const BottomIconButton({
+        Key? key,
+        required this.icon,
+        required this.label,
+        required this.onPressed,
+      }) : super(key: key);
+
+      @override
+      Widget build(BuildContext context) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              onPressed: onPressed,
+              icon: Icon(icon),
+              color: Colors.white,
+            ),
+            SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(color: Colors.white),
+            ),
+          ],
+        );
+      }
+    }
+
+
+    // Author: Seirennn@github.com
+

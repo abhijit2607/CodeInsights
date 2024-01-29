@@ -6,6 +6,7 @@ import 'comment_screen.dart';
 import 'create_post_screen.dart';
 import 'post.dart';
 
+
 class DiscussionPage extends StatefulWidget {
   @override
   _DiscussionPageState createState() => _DiscussionPageState();
