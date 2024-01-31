@@ -1,5 +1,5 @@
-// /lib/post.dart
 import 'comment.dart';
+
 
 class Post {
   String title;
@@ -20,3 +20,10 @@ class Post {
     comments.add(comment);
   }
 }
+
+extension StringExtension on String {
+  String capitalize() {
+    return '${this[0].toUpperCase()}${this.substring(1)}';
+  }
+}
+

@@ -1,9 +1,8 @@
-// /lib/comment.dart
-
 import 'dart:math';
 
+
 class Comment {
-  late String commentId; // Initialize the field
+  late String commentId;
 
   final String text;
   final String userId;
@@ -16,10 +15,9 @@ class Comment {
     required this.username,
     List<Comment>? replies,
   }) : replies = replies ?? [] {
-    commentId = _generateCommentId(); // Generate a unique comment ID
+    commentId = _generateCommentId();
   }
 
-  // Method to add a new reply to the comment
   void addReply(Comment reply) {
     replies.add(reply);
   }
@@ -27,6 +25,7 @@ class Comment {
   String _generateCommentId() {
     final random = Random();
     const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-    return String.fromCharCodes(List.generate(8, (index) => chars.codeUnitAt(random.nextInt(chars.length))));
+    return String.fromCharCodes(List.generate(
+        8, (index) => chars.codeUnitAt(random.nextInt(chars.length))));
   }
 }

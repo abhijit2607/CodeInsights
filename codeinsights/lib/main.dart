@@ -7,8 +7,12 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
+import 'auth.dart';
+import 'learn_page.dart';
 import 'sign_in_screen.dart';
 import 'sign_up_screen.dart';
+
+final AuthService authService = AuthService();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,7 +20,8 @@ Future<void> main() async {
     options: FirebaseOptions(
       apiKey: "AIzaSyBNNhBzISxqg452EzXHAejKNhZGTKr4wC8",
       authDomain: "codeinsights-792b1.firebaseapp.com",
-      databaseURL: "https://codeinsights-792b1-default-rtdb.asia-southeast1.firebasedatabase.app",
+      databaseURL:
+          "https://codeinsights-792b1-default-rtdb.asia-southeast1.firebasedatabase.app",
       projectId: "codeinsights-792b1",
       storageBucket: "codeinsights-792b1.appspot.com",
       messagingSenderId: "358578040162",
@@ -59,6 +64,7 @@ class MyAppState extends ChangeNotifier {
     current = Post.random(username);
     notifyListeners();
   }
+
   var favorites = <Post>[];
 
   void toggleFavorite([Post? post]) {
@@ -81,6 +87,7 @@ class MyAppState extends ChangeNotifier {
     var animatedList = historyListKey?.currentState;
     animatedList?.insertItem(0);
     notifyListeners();
+    FirestoreService().addPost(title, content, current.username);
   }
 }
 
@@ -151,38 +158,41 @@ class _MyHomePageState extends State<MyHomePage> {
     }
 
     Widget _buildLeadingWidget() {
-  final screenWidth = MediaQuery.of(context).size.width;
+      final screenWidth = MediaQuery.of(context).size.width;
 
-  if (screenWidth < 450) {
-    return Container(
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly, // Align children to the start (left)
-        children: [
-          Padding(
-            padding: EdgeInsets.only(left: 105.0, right: 100.0), // Adjust the left padding as needed
-            child: Text(
-              'CW',
-              style: TextStyle(
-                fontFamily: 'TeXGyreBonum',
-                fontWeight: FontWeight.bold,
-                fontSize: 22,
+      if (screenWidth < 450) {
+        return Container(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment
+                .spaceEvenly, // Align children to the start (left)
+            children: [
+              Padding(
+                padding: EdgeInsets.only(
+                    left: 105.0,
+                    right: 100.0), // Adjust the left padding as needed
+                child: Text(
+                  'CW',
+                  style: TextStyle(
+                    fontFamily: 'TeXGyreBonum',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 22,
+                  ),
+                ),
               ),
-            ),
+              IconButton(
+                icon: Icon(Icons.search),
+                padding: EdgeInsets.only(left: 20, right: 0),
+                onPressed: () {
+                  // Add your search icon action here
+                },
+              ),
+            ],
           ),
-          IconButton(
-            icon: Icon(Icons.search),
-            padding: EdgeInsets.only(left: 20, right: 0),
-            onPressed: () {
-              // Add your search icon action here
-            },
-          ),
-        ],
-      ),
-    );
-  } else {
-    return _buildLogoImage();
-  }
-}
+        );
+      } else {
+        return _buildLogoImage();
+      }
+    }
 
     var leadingWidget = _buildLeadingWidget();
 
@@ -212,9 +222,11 @@ class _MyHomePageState extends State<MyHomePage> {
                 onPressed: () {
                   _showPostDialog(context, appState);
                 },
-                child: Text('Start Discussion', style: TextStyle(color: Colors.white)),
+                child: Text('Start Discussion',
+                    style: TextStyle(color: Colors.white)),
                 style: ButtonStyle(
-                  backgroundColor: MaterialStateProperty.all<Color>(Colors.blue),
+                  backgroundColor:
+                      MaterialStateProperty.all<Color>(Colors.blue),
                   shape: MaterialStateProperty.all<RoundedRectangleBorder>(
                     RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -236,39 +248,40 @@ class _MyHomePageState extends State<MyHomePage> {
                   ],
                 ),
                 Positioned(
-  bottom: 8,
-  left: 305,
-  right: 0,
-  child: Row(
-    mainAxisAlignment: MainAxisAlignment.spaceAround,
-    children: [
-      FloatingActionButton(
-        onPressed: () {
-          _showPostDialog(context, appState);
-        },
-        tooltip: 'Start Discussion',
-        child: Icon(Icons.post_add),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(45),
-        ),
-      ),
-      if (MediaQuery.of(context).size.width >= 1024) // Only show the search box for desktop view
-  Container(
-    width: 200, // Adjust the width as needed
-    padding: EdgeInsets.only(left: 8),
-    child: TextField(
-      // Add your search text field properties here
-      decoration: InputDecoration(
-        hintText: 'Search',
-        // ... other properties
-      ),
-    ),
-  ),
-    ],
-  ),
-),
+                  bottom: 8,
+                  left: 305,
+                  right: 0,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      FloatingActionButton(
+                        onPressed: () {
+                          _showPostDialog(context, appState);
+                        },
+                        tooltip: 'Start Discussion',
+                        child: Icon(Icons.post_add),
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(45),
+                        ),
+                      ),
+                      if (MediaQuery.of(context).size.width >=
+                          1024) // Only show the search box for desktop view
+                        Container(
+                          width: 200, // Adjust the width as needed
+                          padding: EdgeInsets.only(left: 8),
+                          child: TextField(
+                            // Add your search text field properties here
+                            decoration: InputDecoration(
+                              hintText: 'Search',
+                              // ... other properties
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
               ],
             );
           } else {
@@ -320,6 +333,13 @@ class _MyHomePageState extends State<MyHomePage> {
                     onDestinationSelected: (value) {
                       setState(() {
                         selectedIndex = value;
+                        if (value == 2) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => LearnPage()),
+                          );
+                        }
                       });
                     },
                   ),
@@ -331,7 +351,9 @@ class _MyHomePageState extends State<MyHomePage> {
         },
       ),
 
-drawer: MediaQuery.of(context).size.width < 450 ? _buildDrawer(context) : null,
+      drawer: MediaQuery.of(context).size.width < 450
+          ? _buildDrawer(context)
+          : null,
 
       bottomNavigationBar: MediaQuery.of(context).size.width < 1024
           ? BottomNavigationBar(
@@ -353,6 +375,13 @@ drawer: MediaQuery.of(context).size.width < 450 ? _buildDrawer(context) : null,
               onTap: (index) {
                 setState(() {
                   selectedIndex = index;
+                  // Add logic to navigate to the corresponding page based on the index
+                  if (index == 2) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => LearnPage()),
+                    );
+                  }
                 });
               },
             )
@@ -365,65 +394,66 @@ drawer: MediaQuery.of(context).size.width < 450 ? _buildDrawer(context) : null,
   }
 
   Widget _buildDrawer(BuildContext context) {
-  return Drawer(
-    child: ListView(
-      padding: EdgeInsets.zero,
-      children: [
-        DrawerHeader(
-          decoration: BoxDecoration(
-            color: Colors.blue,
-          ),
-          child: Text(
-            'Drawer Header',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 24,
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          DrawerHeader(
+            decoration: BoxDecoration(
+              color: Color.fromARGB(255, 29, 29, 30),
+            ),
+            child: Text(
+              'Codewire',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 24,
+              ),
             ),
           ),
-        ),
-        ListTile(
-          title: Text('Profile'),
-          onTap: () {
-            // Handle item 1 tap
-          },
-        ),
-        ListTile(
-          title: Text('Settings'),
-          onTap: () {
-            // Handle item 2 tap
-          },
-        ),
-        ListTile(
-          title: Text('Login'),
-          onTap: () {
-            _showLoginDialog(context);
-          },
-        ),
-        ListTile(
-          title: Text('Sign Up'),
-          onTap: () {
-            _showSignUpDialog(context);
-          },
-        ),
-      ],
-    ),
-  );
-}
+          ListTile(
+            title: Text('Profile'),
+            onTap: () {
+              // Handle item 1 tap
+            },
+          ),
+          ListTile(
+            title: Text('Settings'),
+            onTap: () {
+              // Handle item 2 tap
+            },
+          ),
+          ListTile(
+            title: Text('Login'),
+            onTap: () {
+              _showLoginDialog(context);
+            },
+          ),
+          ListTile(
+            title: Text('Sign Up'),
+            onTap: () {
+              _showSignUpDialog(context);
+            },
+          ),
+        ],
+      ),
+    );
+  }
 
-void _showLoginDialog(BuildContext context) {
-  
-  // Implement the login dialog here
-  // You can use the same StatefulBuilder pattern as in the _showPostDialog method
-   Navigator.pop(context); // Close the drawer
-  Navigator.push(context, MaterialPageRoute(builder: (context) => SignInScreen()));
-}
-
-void _showSignUpDialog(BuildContext context) {
-  // Implement the sign-up dialog here
-  // You can use the same StatefulBuilder pattern as in the _showPostDialog method
+  void _showLoginDialog(BuildContext context) {
+    // Implement the login dialog here
+    // You can use the same StatefulBuilder pattern as in the _showPostDialog method
     Navigator.pop(context); // Close the drawer
-  Navigator.push(context, MaterialPageRoute(builder: (context) => SignUpScreen()));
-}
+    Navigator.push(
+        context, MaterialPageRoute(builder: (context) => SignInScreen()));
+  }
+
+  void _showSignUpDialog(BuildContext context) {
+    // Implement the sign-up dialog here
+    // You can use the same StatefulBuilder pattern as in the _showPostDialog method
+    Navigator.pop(context); // Close the drawer
+    Navigator.push(
+        context, MaterialPageRoute(builder: (context) => SignUpScreen()));
+  }
 
   void _showPostDialog(BuildContext context, MyAppState appState) {
     showDialog(
@@ -556,7 +586,8 @@ void _showSignUpDialog(BuildContext context) {
                               setState(() {
                                 _images.add(File(result.files.single.path!));
                               });
-                              print('Image picked: ${result.files.single.path}');
+                              print(
+                                  'Image picked: ${result.files.single.path}');
                             }
                           },
                           child: Text('Add Image'),
@@ -599,13 +630,12 @@ void _showSignUpDialog(BuildContext context) {
     );
   }
 }
-  class PostHistoryPage extends StatelessWidget {
+
+class PostHistoryPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    var appState = context.watch<MyAppState>();
-
     return StreamBuilder<List<Post>>(
-      stream: appState.getPosts(), // Use the getPosts method from appState
+      stream: FirestoreService().getPosts(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return CircularProgressIndicator();
@@ -616,8 +646,6 @@ void _showSignUpDialog(BuildContext context) {
         } else {
           var posts = snapshot.data!;
           return ListView.builder(
-            shrinkWrap: true,
-            physics: NeverScrollableScrollPhysics(),
             itemCount: posts.length,
             itemBuilder: (context, index) {
               var post = posts[index];
@@ -636,62 +664,64 @@ void _showSignUpDialog(BuildContext context) {
   }
 }
 
+class FavoritesPage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    var theme = Theme.of(context);
+    var appState = context.watch<MyAppState>();
 
-    class FavoritesPage extends StatelessWidget {
-      @override
-      Widget build(BuildContext context) {
-        var theme = Theme.of(context);
-        var appState = context.watch<MyAppState>();
-
-        if (appState.favorites.isEmpty) {
-          return Center(
-            child: Text('No favorites yet.'),
-          );
-        }
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(30),
-              child: Text('You have '
-                  '${appState.favorites.length} favorites:'),
-            ),
-            Expanded(
-              child: GridView(
-                gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-                  maxCrossAxisExtent: 400,
-                  childAspectRatio: 400 / 80,
-                ),
-                children: [
-                  for (var post in appState.favorites)
-                    ListTile(
-                      leading: IconButton(
-                        icon: Icon(Icons.delete_outline, semanticLabel: 'Delete'),
-                        color: theme.colorScheme.primary,
-                        onPressed: () {
-                          appState.removeFavorite(post);
-                        },
-                      ),
-                      title: Text(
-                        post.asLowerCase,
-                        semanticsLabel: post.asPascalCase,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ],
-        );
-      }
+    if (appState.favorites.isEmpty) {
+      return Center(
+        child: Text('No Notifications yet.'),
+      );
     }
-    class Post {
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(30),
+          child: Text('You have '
+              '${appState.favorites.length} favorites:'),
+        ),
+        Expanded(
+          child: GridView(
+            gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+              maxCrossAxisExtent: 400,
+              childAspectRatio: 400 / 80,
+            ),
+            children: [
+              for (var post in appState.favorites)
+                ListTile(
+                  leading: IconButton(
+                    icon: Icon(Icons.delete_outline, semanticLabel: 'Delete'),
+                    color: theme.colorScheme.primary,
+                    onPressed: () {
+                      appState.removeFavorite(post);
+                    },
+                  ),
+                  title: Text(
+                    post.asLowerCase,
+                    semanticsLabel: post.asPascalCase,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class Post {
   final String title;
   final String content;
   final String userId;
-  final String username; // Add this property
+  final String username;
+  final List<Comment> comments; // Add a list of comments to the Post class
 
-  Post(this.title, this.content, {this.userId = '', this.username = ''});
+  Post(this.title, this.content, {this.userId = '', this.username = '', List<Comment>? comments})
+      : comments = comments ?? []; // Initialize the comments list
 
   factory Post.random(String username) {
     return Post(
@@ -701,48 +731,55 @@ void _showSignUpDialog(BuildContext context) {
     );
   }
 
-      String get asLowerCase => '$title $content'.toLowerCase();
+  String get asLowerCase => '$title $content'.toLowerCase();
 
-      String get asPascalCase => '${title.capitalize()} ${content.capitalize()}';
-    }
+  String get asPascalCase => '${title.capitalize()} ${content.capitalize()}';
+}
 
-    extension StringExtension on String {
-      String capitalize() {
-        return '${this[0].toUpperCase()}${this.substring(1)}';
-      }
-    }
+extension StringExtension on String {
+  String capitalize() {
+    return '${this[0].toUpperCase()}${this.substring(1)}';
+  }
+}
 
-    class BottomIconButton extends StatelessWidget {
-      final IconData icon;
-      final String label;
-      final VoidCallback onPressed;
+class BottomIconButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onPressed;
 
-      const BottomIconButton({
-        Key? key,
-        required this.icon,
-        required this.label,
-        required this.onPressed,
-      }) : super(key: key);
+  const BottomIconButton({
+    Key? key,
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+  }) : super(key: key);
 
-      @override
-      Widget build(BuildContext context) {
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              onPressed: onPressed,
-              icon: Icon(icon),
-              color: Colors.white,
-            ),
-            SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(color: Colors.white),
-            ),
-          ],
-        );
-      }
-    }
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          onPressed: onPressed,
+          icon: Icon(icon),
+          color: Colors.white,
+        ),
+        SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(color: Colors.white),
+        ),
+      ],
+    );
+  }
+}
+class Comment {
+  final String userId;
+  final String username;
+  final String content;
+
+  Comment({required this.userId, required this.username, required this.content});
+}
 
 
     // Author: Seirennn@github.com
