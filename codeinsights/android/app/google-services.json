@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "358578040162",
+    "firebase_url": "https://codeinsights-792b1-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "codeinsights-792b1",
+    "storage_bucket": "codeinsights-792b1.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:358578040162:android:c1e4d249b882a12f36903b",
+        "android_client_info": {
+          "package_name": "com.codewire"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "358578040162-1mo6drq89c3fme1rlt5ks1l8km0j4t59.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBJ_yq_G7EIDeaNNa5Vlnceb1F09oPQu2A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "358578040162-1mo6drq89c3fme1rlt5ks1l8km0j4t59.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

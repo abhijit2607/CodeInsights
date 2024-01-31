@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>358578040162-tgqe1f6nbg4dv63aim15se7dhd6a6dav.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.358578040162-tgqe1f6nbg4dv63aim15se7dhd6a6dav</string>
+	<key>API_KEY</key>
+	<string>AIzaSyDg93PRegkzfStn2Ru-nS6bOxx-x1i633c</string>
+	<key>GCM_SENDER_ID</key>
+	<string>358578040162</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.Codewire</string>
+	<key>PROJECT_ID</key>
+	<string>codeinsights-792b1</string>
+	<key>STORAGE_BUCKET</key>
+	<string>codeinsights-792b1.appspot.com</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:358578040162:ios:2c5749a9792416bf36903b</string>
+	<key>DATABASE_URL</key>
+	<string>https://codeinsights-792b1-default-rtdb.asia-southeast1.firebasedatabase.app</string>
+</dict>
+</plist>
